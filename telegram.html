@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👥 Онлайн пользователи</title>
+    <!-- Обязательно подключаем Telegram SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .online-counter {
+            text-align: center;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: bold;
+        }
+        
+        .user-id {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+        
+        .my-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e6f7ff;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Онлайн пользователи</h1>
+        
+        <div class="online-counter">
+            Сейчас онлайн: <span id="count">0</span>
+        </div>
+        
+        <div id="usersList">
+            <div class="loading">Загрузка...</div>
+        </div>
+        
+        <div class="my-info">
+            Ваш ID Telegram: <span id="myId">...</span>
+        </div>
+    </div>
+
+    <script>
+        // ====== TELEGRAM MINI APP ======
+        
+        // 1. Инициализируем Telegram Web App
+        const tg = window.Telegram.WebApp;
+        
+        // 2. Разворачиваем на весь экран и говорим что готовы
+        tg.expand();
+        tg.ready();
+        
+        // 3. Получаем данные пользователя из Telegram
+        const tgUser = tg.initDataUnsafe.user;
+        
+        // Если Telegram не передал данные, показываем ошибку
+        if (!tgUser) {
+            document.getElementById('usersList').innerHTML = 
+                '<div style="color: red; text-align: center;">Ошибка: не удалось получить данные Telegram</div>';
+            throw new Error('Telegram user data not available');
+        }
+        
+        console.log('Telegram User:', tgUser);
+        
+        const myUserId = tgUser.id;
+        const myFirstName = tgUser.first_name || '';
+        const myLastName = tgUser.last_name || '';
+        const myUsername = tgUser.username || '';
+        const myPhotoUrl = tgUser.photo_url || '';
+        
+        // 4. Показываем свои данные
+        document.getElementById('myId').textContent = myUserId;
+        
+        // 5. Функция отправки данных на сервер
+        async function sendMyData() {
+            const userData = {
+                id: myUserId,
+                first_name: myFirstName,
+                last_name: myLastName,
+                username: myUsername,
+                photo_url: myPhotoUrl
+            };
+            
+            try {
+                const response = await fetch('/api/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Данные отправлены на сервер');
+                }
+            } catch (error) {
+                console.error('❌ Ошибка отправки:', error);
+            }
+        }
+        
+        // 6. Функция загрузки списка пользователей
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                updateUserList(users);
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+            }
+        }
+        
+        // 7. Обновляем список на странице
+        function updateUserList(users) {
+            const usersList = document.getElementById('usersList');
+            const countElement = document.getElementById('count');
+            
+            if (!users || users.length === 0) {
+                usersList.innerHTML = '<div class="loading">Нет пользователей онлайн</div>';
+                countElement.textContent = '0';
+                return;
+            }
+            
+            // Фильтруем себя из списка
+            const otherUsers = users.filter(user => user.id !== myUserId);
+            
+            countElement.textContent = otherUsers.length;
+            
+            if (otherUsers.length === 0) {
+                usersList.innerHTML = '<div class="loading">Вы одни онлайн</div>';
+                return;
+            }
+            
+            // Показываем список
+            usersList.innerHTML = otherUsers.map(user => `
+                <div class="user-card">
+                    <div class="user-avatar">
+                        ${user.first_name ? user.first_name.charAt(0).toUpperCase() : 'T'}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">
+                            ${user.first_name || ''} ${user.last_name || ''}
+                            ${user.username ? `(@${user.username})` : ''}
+                        </div>
+                        <div class="user-id">ID: ${user.id}</div>
+                    </div>
+                    <div class="status"></div>
+                </div>
+            `).join('');
+        }
+        
+        // 8. Инициализация приложения
+        async function init() {
+            console.log('🚀 Telegram Mini App запущена');
+            console.log('👤 Пользователь:', tgUser);
+            
+            // Отправляем свои данные
+            await sendMyData();
+            
+            // Загружаем список пользователей
+            await loadUsers();
+            
+            // Обновляем список каждые 3 секунды
+            setInterval(loadUsers, 3000);
+            
+            // Отправляем heartbeat каждые 5 секунд
+            setInterval(sendMyData, 5000);
+        }
+        
+        // 9. Запускаем приложение
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

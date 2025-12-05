@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест</title>
+</head>
+<body>
+    <h1>Простой тест сервера</h1>
+    <button onclick="testAPI()">Тест API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Тестируем...';
+            
+            try {
+                // Тест 1: Отправляем данные
+                const userData = {
+                    id: 123456789,
+                    first_name: "Тестовый",
+                    last_name: "Пользователь",
+                    username: "test_user"
+                };
+                
+                const updateResponse = await fetch('/api/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(userData)
+                });
+                
+                const updateResult = await updateResponse.json();
+                result.innerHTML += `<br>✅ Отправка данных: ${JSON.stringify(updateResult)}`;
+                
+                // Тест 2: Получаем список
+                const usersResponse = await fetch('/api/users');
+                const users = await usersResponse.json();
+                result.innerHTML += `<br>✅ Получение списка: ${JSON.stringify(users)}`;
+                
+                // Тест 3: Информация о сервере
+                const infoResponse = await fetch('/api/info');
+                const info = await infoResponse.json();
+                result.innerHTML += `<br>✅ Информация сервера: ${JSON.stringify(info)}`;
+                
+            } catch (error) {
+                result.innerHTML += `<br>❌ Ошибка: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

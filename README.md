@@ -1,1 +1,0 @@
-# my-seventh-telegram-app
