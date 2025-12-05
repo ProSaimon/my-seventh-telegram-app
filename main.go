@@ -24,7 +24,7 @@ var (
 )
 
 func homePage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "telegram.html") // Используем telegram.html
+	http.ServeFile(w, r, "index.html") // Используем telegram.html
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
